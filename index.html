@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Solar System Explorer Pro</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <canvas id="stars"></canvas>
+
+  <header>
+    <h1>🌌 Solar System Explorer Pro</h1>
+    <p>Interactive planets • Quiz • Fun facts</p>
+  </header>
+
+  <main>
+
+    <section class="grid">
+
+      <div class="card" onclick="showPlanet('Mercury')">Mercury</div>
+      <div class="card" onclick="showPlanet('Venus')">Venus</div>
+      <div class="card" onclick="showPlanet('Earth')">Earth</div>
+      <div class="card" onclick="showPlanet('Mars')">Mars</div>
+      <div class="card" onclick="showPlanet('Jupiter')">Jupiter</div>
+      <div class="card" onclick="showPlanet('Saturn')">Saturn</div>
+      <div class="card" onclick="showPlanet('Uranus')">Uranus</div>
+      <div class="card" onclick="showPlanet('Neptune')">Neptune</div>
+
+    </section>
+
+    <section class="info-box">
+      <h2 id="planetName">Click a planet</h2>
+      <p id="planetInfo">Information will appear here.</p>
+    </section>
+
+    <section class="quiz">
+      <h2>🧠 Quick Quiz</h2>
+      <p id="question"></p>
+
+      <button onclick="answer(true)">True</button>
+      <button onclick="answer(false)">False</button>
+
+      <p id="quizResult"></p>
+    </section>
+
+  </main>
+
+  <audio id="clickSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a8b2f6.mp3"></audio>
+  <audio id="correctSound" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_c5c3d5d4f2.mp3"></audio>
+  <audio id="wrongSound" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_2a8a4c1c12.mp3"></audio>
+
+  <script src="script.js"></script>
+</body>
+</html>
