@@ -1,56 +1,203 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Solar System Explorer Pro</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Solar System Space Game</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: black; }
+    canvas { display: block; }
+
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: Arial;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+      border-radius: 8px;
+      z-index: 10;
+      font-size: 14px;
+    }
+
+    #mission {
+      margin-top: 5px;
+      color: #00ffcc;
+    }
+  </style>
 </head>
 <body>
 
-  <canvas id="stars"></canvas>
+<div id="hud">
+  🚀 SPACE GAME MODE<br>
+  WASD = Move | Shift = Boost | Click = Info<br>
+  ⛽ Fuel: <span id="fuel">100</span>%  
+  <div id="mission">Mission: Visit Mars 🪐</div>
+  <div id="info">No planet selected</div>
+</div>
 
-  <header>
-    <h1>🌌 Solar System Explorer Pro</h1>
-    <p>Interactive planets • Quiz • Fun facts</p>
-  </header>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
-  <main>
+<script>
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x000000, 50, 500);
 
-    <section class="grid">
+// CAMERA
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  2000
+);
+camera.position.set(0, 20, 80);
 
-      <div class="card" onclick="showPlanet('Mercury')">Mercury</div>
-      <div class="card" onclick="showPlanet('Venus')">Venus</div>
-      <div class="card" onclick="showPlanet('Earth')">Earth</div>
-      <div class="card" onclick="showPlanet('Mars')">Mars</div>
-      <div class="card" onclick="showPlanet('Jupiter')">Jupiter</div>
-      <div class="card" onclick="showPlanet('Saturn')">Saturn</div>
-      <div class="card" onclick="showPlanet('Uranus')">Uranus</div>
-      <div class="card" onclick="showPlanet('Neptune')">Neptune</div>
+// RENDERER
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-    </section>
+// LIGHT
+const light = new THREE.PointLight(0xffffff, 2);
+scene.add(light);
 
-    <section class="info-box">
-      <h2 id="planetName">Click a planet</h2>
-      <p id="planetInfo">Information will appear here.</p>
-    </section>
+// 🌞 SUN
+const sun = new THREE.Mesh(
+  new THREE.SphereGeometry(6, 64, 64),
+  new THREE.MeshBasicMaterial({ color: 0xffcc33 })
+);
+scene.add(sun);
 
-    <section class="quiz">
-      <h2>🧠 Quick Quiz</h2>
-      <p id="question"></p>
+// PLANETS
+const loader = new THREE.TextureLoader();
 
-      <button onclick="answer(true)">True</button>
-      <button onclick="answer(false)">False</button>
+const planetsData = [
+  { name:"Mercury", size:0.6, color:0x888888, dist:10, speed:0.04 },
+  { name:"Venus", size:0.9, color:0xff9966, dist:14, speed:0.03 },
+  { name:"Earth", size:1, texture:"https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg", dist:18, speed:0.02 },
+  { name:"Mars", size:0.8, texture:"https://threejs.org/examples/textures/mars_1k_color.jpg", dist:22, speed:0.018 },
+  { name:"Jupiter", size:2.5, texture:"https://threejs.org/examples/textures/jupiter.jpg", dist:30, speed:0.008 }
+];
 
-      <p id="quizResult"></p>
-    </section>
+const planets = [];
 
-  </main>
+planetsData.forEach(p => {
+  let mat = p.texture
+    ? new THREE.MeshStandardMaterial({ map: loader.load(p.texture) })
+    : new THREE.MeshStandardMaterial({ color: p.color });
 
-  <audio id="clickSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a8b2f6.mp3"></audio>
-  <audio id="correctSound" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_c5c3d5d4f2.mp3"></audio>
-  <audio id="wrongSound" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_2a8a4c1c12.mp3"></audio>
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(p.size, 64, 64),
+    mat
+  );
 
-  <script src="script.js"></script>
+  mesh.userData = {
+    name: p.name,
+    dist: p.dist,
+    speed: p.speed,
+    angle: Math.random() * Math.PI * 2,
+    visited: false
+  };
+
+  scene.add(mesh);
+  planets.push(mesh);
+});
+
+// ⭐ STARS
+for (let i = 0; i < 1000; i++) {
+  const star = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1, 6, 6),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+  );
+
+  star.position.set(
+    (Math.random() - 0.5) * 1200,
+    (Math.random() - 0.5) * 1200,
+    (Math.random() - 0.5) * 1200
+  );
+
+  scene.add(star);
+}
+
+// 🚀 SHIP MOVEMENT
+let velocity = new THREE.Vector3();
+let fuel = 100;
+
+const keys = {};
+document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+// CLICK PLANETS
+const raycaster = new THREE.Raycaster();
+document.addEventListener("click", (event) => {
+  raycaster.setFromCamera(
+    new THREE.Vector2(
+      (event.clientX / window.innerWidth) * 2 - 1,
+      -(event.clientY / window.innerHeight) * 2 + 1
+    ),
+    camera
+  );
+
+  const hits = raycaster.intersectObjects(planets);
+
+  if (hits.length > 0) {
+    const p = hits[0].object.userData;
+    document.getElementById("info").innerText =
+      p.name + " visited: " + p.visited;
+  }
+});
+
+// GAME LOOP
+function animate() {
+  requestAnimationFrame(animate);
+
+  sun.rotation.y += 0.002;
+
+  // PLANETS ORBIT
+  planets.forEach(p => {
+    p.userData.angle += p.userData.speed;
+    p.position.x = Math.cos(p.userData.angle) * p.userData.dist;
+    p.position.z = Math.sin(p.userData.angle) * p.userData.dist;
+  });
+
+  // 🚀 MOVEMENT SYSTEM
+  let speed = 0.3;
+
+  if (keys["shift"] && fuel > 0) {
+    speed = 0.8;
+    fuel -= 0.2;
+  }
+
+  if (keys["w"]) velocity.z -= speed;
+  if (keys["s"]) velocity.z += speed;
+  if (keys["a"]) velocity.x -= speed;
+  if (keys["d"]) velocity.x += speed;
+
+  camera.position.add(velocity);
+
+  // friction
+  velocity.multiplyScalar(0.95);
+
+  // HUD update
+  document.getElementById("fuel").innerText = Math.max(0, fuel.toFixed(0));
+
+  // mission check (Mars)
+  const mars = planets.find(p => p.userData.name === "Mars");
+  if (mars && camera.position.distanceTo(mars.position) < 8) {
+    document.getElementById("mission").innerText = "Mission Complete: Mars ✔";
+    mars.userData.visited = true;
+  }
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// RESIZE
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+
 </body>
 </html>
